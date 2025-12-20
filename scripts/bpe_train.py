@@ -1,14 +1,36 @@
 #!/usr/bin/env python
 
+"""
+Usage:
+    python scripts/bpe_train.py \
+        --input-path data/TinyStories/valid_with_eot.txt \
+        --vocab-size 10000
+"""
+
 import json
 from pathlib import Path
+import argparse
 
-from forge_transformer import DATA_DIR, BASE_DIR
+from forge_transformer import BASE_DIR
 from forge_transformer.bpe import get_word_freqs_stream
 from forge_transformer.bpe.trainer import get_stats, merge_vocab
 
 
-def main(input_path: str | Path, vocab_size: int, output_dir: str | Path = BASE_DIR / "bpe_model"):
+def parse_args():
+    parser = argparse.ArgumentParser()
+    # 命令行用 --input-path，argparse 会自动解析为 args.input_path
+    parser.add_argument("--input-path", type=Path, required=True)
+    parser.add_argument("--vocab-size", type=int, required=True)
+    parser.add_argument("--output-dir", type=Path, default=BASE_DIR / "bpe_model")
+
+    return parser.parse_args()
+
+
+def main(
+    input_path: str | Path,
+    vocab_size: int,
+    output_dir: str | Path = BASE_DIR / "bpe_model",
+):
     input_path = Path(input_path)
     output_dir = Path(output_dir)
     if not output_dir.exists():
@@ -64,7 +86,12 @@ def main(input_path: str | Path, vocab_size: int, output_dir: str | Path = BASE_
     print(f"Training Complete. Files saved to {output_dir}")
     return vocab, merges
 
-    # if __name__ == "main":
 
+if __name__ == "__main__":
+    args = parse_args()
 
-main(input_path=(DATA_DIR / "TinyStories/train_with_eot.txt"), vocab_size=10000)
+    main(
+        input_path=args.input_path,
+        vocab_size=args.vocab_size,
+        output_dir=args.output_dir,
+    )
