@@ -39,7 +39,7 @@ def main(input_path: str | Path, vocab_size: int, output_dir: str | Path = BASE_
 
         merge_vocab(best_pair, new_id, vocab_splits)
 
-        if len(vocab) % 1000 == 0:
+        if len(vocab) % 100 == 0:
             try:
                 merge_str = vocab[new_id].decode("utf-8")
             except:
