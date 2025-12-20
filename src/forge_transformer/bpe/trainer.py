@@ -2,7 +2,6 @@ from pathlib import Path
 import regex as re
 from tqdm import tqdm
 from collections import Counter, defaultdict
-from typing import Dict, List, Tuple
 
 
 def get_word_freqs_stream(text_path: str | Path):
@@ -37,9 +36,9 @@ def get_word_freqs_stream(text_path: str | Path):
 
 # 统计当前所有相邻 pair 的频率
 def get_stats(
-    vocab_splits: Dict[str, List[int]],
-    word_freqs: Dict[str, int],
-) -> Dict[Tuple[int, int], int]:
+    vocab_splits: dict[str, list[int]],
+    word_freqs: dict[str, int],
+) -> dict[tuple[int, int], int]:
     counts = defaultdict(int)
     for word, ids in vocab_splits.items():
         freq = word_freqs[word]
@@ -50,9 +49,9 @@ def get_stats(
 
 
 def merge_vocab(
-    pair: Tuple[int, int],
+    pair: tuple[int, int],
     new_id: int,
-    vocab_splits: Dict[str, List[int]],
+    vocab_splits: dict[str, list[int]],
 ):
     p0, p1 = pair
     for word in vocab_splits:
