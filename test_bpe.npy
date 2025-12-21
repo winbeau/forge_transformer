@@ -1,0 +1,11 @@
+from forge_transformer.bpe import Tokenizer
+from forge_transformer import BASE_DIR
+
+tok = Tokenizer.from_files(BASE_DIR/"bpe_model/vocab.json", BASE_DIR/"bpe_model/merges.txt", ["<|endoftext|>"])
+
+s = "One"
+ids = tok.encode(s)
+print("ids:", ids)
+print("len:", len(ids))
+print("decoded:", tok.decode(ids))
+

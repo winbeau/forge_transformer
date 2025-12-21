@@ -1,8 +1,6 @@
 import json
 from functools import lru_cache
-from os import error
 from pathlib import Path
-from pandas.core.computation.parsing import token
 import regex as re
 
 
@@ -10,16 +8,28 @@ class Tokenizer:
     def __init__(
         self,
         vocab: dict[int, bytes],
-        merges: list[tuple[bytes, bytes]],
+        merges: list[tuple[int, int]],
         special_tokens: list[str] | None = None,
     ):
         self.vocab = vocab
-        self.vocab_rev = {v: k for k, v in vocab.items()}
         self.special_tokens = special_tokens or []
 
-        self.PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
+        # reverse map: bytes -> id (for special tokens / merged strings if needed)
+        self.vocab_rev = {v: k for k, v in vocab.items()}
 
-        self.bpe_ranks = {pair: i for i, pair in enumerate(merges)}
+        self.PAT = re.compile(
+            r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+        )
+
+        # rank for merging (a_id, b_id) -> rank
+        self.bpe_ranks: dict[tuple[int, int], int] = {pair: i for i, pair in enumerate(merges)}
+
+        # Build merge result table: (a,b) -> new_id
+        # With your vocab format, merged token ids start at 256 or 257.
+        # In classic BPE training, the i-th merge creates token id = base_vocab_size + i.
+        # Here base is 256 (bytes) + 1 for eot? but your vocab shows 256 is eot, merges start producing 257...
+        # So new_id = 257 + rank
+        self.merge_new_id_base = 257
 
     @classmethod
     def from_files(
@@ -30,113 +40,68 @@ class Tokenizer:
     ) -> "Tokenizer":
         with open(vocab_path, "r", encoding="utf-8") as f:
             vocab_data = json.load(f)
+
+        # vocab values are strings; encode to bytes
         vocab = {int(i): v.encode("utf-8") for i, v in vocab_data.items()}
 
-        merges = []
+        merges: list[tuple[int, int]] = []
         with open(merges_path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
-                parts = line.split()
-                if len(parts) != 2:
-                    continue
-                merges.append((parts[0].encode(), parts[1].encode()))
+                a, b = line.split()
+                merges.append((int(a), int(b)))
+
         return cls(vocab, merges, special_tokens)
 
-    def bpe(self, token: bytes) -> list[bytes]:
-        word = [bytes([b]) for b in token]  # 字节串 -> 字节序列
-        pairs = set(zip(word, word[1:]))
-
-        if not pairs:
-            return word
-
-        while True:
-            candidates = pairs.intersection(self.bpe_ranks.keys())
-
-            if not candidates:
-                break  # 没有适合相邻字符可以合并时 直接退出
-
-            bigram = min(candidates, key=self.bpe_ranks.__getitem__)
-
-            first, second = bigram
-            new_word = []
-            i = 0
-            while i < len(word):
-                if i < len(word) - 1 and word[i] == first and word[i + 1] == second:
-                    new_word.append(first + second)
-                    i += 2
-                else:
-                    new_word.append(word[i])
-                    i += 1
-
-            word = new_word
-
-            if len(word) == 1:
-                break  # 合并完只剩一个token(最终合成为一个token), 结束
-
-            pairs = set(zip(word, word[1:]))  # 重新生成pairs用于下一轮
-
-        return word
-
     @lru_cache(maxsize=200000)
-    def _get_bpe_tokens(self, token_bytes: bytes) -> tuple[bytes, ...]:
-        word = [bytes([b]) for b in token_bytes]
-        pairs = set(zip(word, word[1:]))
-        if not pairs:
+    def _bpe_ids(self, token_bytes: bytes) -> tuple[int, ...]:
+        """
+        BPE over initial byte ids (0..255).
+        Uses merges defined as pairs of token ids.
+        """
+        # initial symbols are byte ids
+        word: list[int] = list(token_bytes)
+        if len(word) <= 1:
             return tuple(word)
 
         while True:
-            candidates = pairs.intersection(self.bpe_ranks.keys())
+            pairs = set(zip(word, word[1:]))
+            candidates = [p for p in pairs if p in self.bpe_ranks]
             if not candidates:
                 break
+
+            # pick best-ranked merge
             bigram = min(candidates, key=self.bpe_ranks.__getitem__)
+            rank = self.bpe_ranks[bigram]
+            new_id = self.merge_new_id_base + rank
+
             first, second = bigram
-            new_word = []
+            new_word: list[int] = []
             i = 0
             while i < len(word):
                 if i < len(word) - 1 and word[i] == first and word[i + 1] == second:
-                    new_word.append(first + second)
+                    new_word.append(new_id)
                     i += 2
                 else:
                     new_word.append(word[i])
                     i += 1
+
             word = new_word
             if len(word) == 1:
                 break
-            pairs = set(zip(word, word[1:]))
+
         return tuple(word)
 
     def encode(self, text: str) -> list[int]:
-        ids = []
+        ids: list[int] = []
         for match in self.PAT.finditer(text):
             token_bytes = match.group(0).encode("utf-8")
-
-            # 3. 使用带缓存的 BPE 计算
-            for t in self._get_bpe_tokens(token_bytes):
-                if t in self.vocab_rev:
-                    ids.append(self.vocab_rev[t])
+            ids.extend(self._bpe_ids(token_bytes))
         return ids
-
-    """
-    def encode(self, text: str) -> list[int]:
-        ids = []
-        for match in self.PAT.finditer(text):  # 每个match是正则后的一个单词
-            token_bytes = match.group(0).encode("utf-8")  # 转bytes序列
-
-            if len(token_bytes) == 1 and token_bytes in self.vocab_rev:
-                ids.append(self.vocab_rev[token_bytes])
-                continue
-
-            for t in self.bpe(token_bytes):
-                if t in self.vocab_rev:
-                    ids.append(self.vocab_rev[t])
-        return ids
-    """
 
     def decode(self, ids: list[int]) -> str:
-        byte_stream = b"".join(
-            self.vocab.get(i, b"\xef\xbf\xbd")
-            for i in ids  # \xef\xbf\xbd - Unicode 的 ``
-        )
+        byte_stream = b"".join(self.vocab.get(i, b"\xef\xbf\xbd") for i in ids)
         return byte_stream.decode("utf-8", errors="replace")
+
