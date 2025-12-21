@@ -51,7 +51,7 @@ def main(
     vocab_path: str | Path = BASE_DIR / "bpe_model/vocab.json",
     merges_path: str | Path = BASE_DIR / "bpe_model/merges.txt",
     special_tokens=None,
-    num_workers: int = max(1, cpu_count() - 4),
+    num_workers: int = min(16, max(1, cpu_count() - 4)),
     chunk_size: int = 10000,
 ):
     input_path = Path(input_txt_path)
