@@ -1,5 +1,12 @@
+#!/usr/bin/env python
+
 import torch
 from forge_transformer.model import RoPE
+
+"""
+Usage:
+    python tests/check_RoPE.py
+"""
 
 
 def main():

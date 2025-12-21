@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+
+"""
+Usage:
+    python tests/check_attention.py
+"""
+
 import torch
 import torch.nn as nn
 from forge_transformer.model import MultiHeadSelfAttention
