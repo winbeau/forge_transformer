@@ -8,7 +8,7 @@ tok = Tokenizer.from_files(
     ["<|endoftext|>"],
 )
 
-print("=" * 30 + "Test: bpe tokenizer" + "=" * 30)
+print("=" * 30 + " Test: bpe tokenizer " + "=" * 30)
 print("请输入word:")
 
 while True:
@@ -19,6 +19,7 @@ while True:
             print("ids:", ids)
             print("len:", len(ids))
             print("decoded:", tok.decode(ids))
+        break
 
     except EOFError:
         print("=" * 30 + "Test End" + "=" * 30)
