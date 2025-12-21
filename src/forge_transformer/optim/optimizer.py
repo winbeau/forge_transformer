@@ -4,7 +4,7 @@ import math
 
 class AdamW(torch.optim.Optimizer):
     def __init__(
-        self, params, lr: float = 1e-3, betas: Tuple[float, float] = (0.9, 0.95), eps: float = 1e-8, weight_decay=0.0
+        self, params, lr: float = 1e-3, betas: tuple[float, float] = (0.9, 0.95), eps: float = 1e-8, weight_decay=0.0
     ):  # betas 动量超参
         if lr < 0:
             raise ValueError(f"Invalid learning rate: {lr}")

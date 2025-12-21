@@ -14,8 +14,8 @@ if str(SRC_DIR) not in sys.path:
 
 # --- 2. 导入组件 ---
 from forge_transformer.trainer import TrainingConfig
-from forge_transformer.trainer_class import Trainer
-from forge_transformer.utils.loader import load_token_dataset
+from forge_transformer.trainer import Trainer
+from forge_transformer.utils import load_token_dataset
 
 
 def parse_args():
