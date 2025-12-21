@@ -1,4 +1,5 @@
 import json
+from functools import lru_cache
 from os import error
 from pathlib import Path
 from pandas.core.computation.parsing import token
@@ -78,6 +79,45 @@ class Tokenizer:
 
         return word
 
+    def _get_bpe_tokens(self, token_bytes: bytes) -> list[bytes]:
+        word = [bytes([b]) for b in token_bytes]
+        pairs = set(zip(word, word[1:]))
+        if not pairs:
+            return word
+
+        while True:
+            candidates = pairs.intersection(self.bpe_ranks.keys())
+            if not candidates:
+                break
+            bigram = min(candidates, key=self.bpe_ranks.__getitem__)
+            first, second = bigram
+            new_word = []
+            i = 0
+            while i < len(word):
+                if i < len(word) - 1 and word[i] == first and word[i + 1] == second:
+                    new_word.append(first + second)
+                    i += 2
+                else:
+                    new_word.append(word[i])
+                    i += 1
+            word = new_word
+            if len(word) == 1:
+                break
+            pairs = set(zip(word, word[1:]))
+        return word
+
+    def encode(self, text: str) -> list[int]:
+        ids = []
+        for match in self.PAT.finditer(text):
+            token_bytes = match.group(0).encode("utf-8")
+
+            # 3. 使用带缓存的 BPE 计算
+            for t in self._get_bpe_tokens(token_bytes):
+                if t in self.vocab_rev:
+                    ids.append(self.vocab_rev[t])
+        return ids
+
+    """
     def encode(self, text: str) -> list[int]:
         ids = []
         for match in self.PAT.finditer(text):  # 每个match是正则后的一个单词
@@ -91,6 +131,7 @@ class Tokenizer:
                 if t in self.vocab_rev:
                     ids.append(self.vocab_rev[t])
         return ids
+    """
 
     def decode(self, ids: list[int]) -> str:
         byte_stream = b"".join(
