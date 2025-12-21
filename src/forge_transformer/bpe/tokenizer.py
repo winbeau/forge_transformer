@@ -19,11 +19,18 @@ class Tokenizer:
         PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
         self.compiled_pat = re.compile(PAT)
 
+        if special_tokens:
+            # 构建一个正则来匹配任何一个特殊 token  (<\|endoftext\|>|<|other|>)
+            special_pattern = "|".join(re.escape(k) for k in special_tokens)
+            special_re = re.compile(f"({special_pattern})")
+            self.special_re = special_re
+            self.special_tokens_dict = {sp: 256 + i for i, sp in enumerate(self.special_tokens)}
+
         # merging (a_id, b_id) -> rank | 排名越靠前 频率越高
         # merge.txt 首对token 在bpe_train时分配为257
         self.bpe_ranks: dict[tuple[int, int], int] = {pair: i for i, pair in enumerate(merges)}
 
-        self.merge_new_id_base = 257  # base + rank 快速encode
+        self.merge_new_id_base = 256 + len(self.special_tokens)  # base + rank 快速encode
 
     @classmethod
     def from_files(
@@ -83,11 +90,25 @@ class Tokenizer:
 
         return tuple(word)  # 动态list -> 静态tuple
 
-    def encode(self, text: str) -> list[int]:
+    def _encode_text(self, text: str) -> list[int]:
         ids: list[int] = []
         for match in self.compiled_pat.finditer(text):
             token_bytes = match.group(0).encode("utf-8")
             ids.extend(self.bpe(token_bytes))
+        return ids
+
+    def encode(self, text: str) -> list[int]:
+        if not self.special_tokens:
+            return self._encode_text(text)
+
+        ids: list[int] = []
+        text_parts = self.special_re.split(text)
+
+        for text_part in text_parts:
+            if text_part in self.special_tokens:
+                ids.append(self.special_tokens_dict[text_part])
+            elif text_part:
+                ids.extend(self._encode_text(text_part))
         return ids
 
     def decode(self, ids: list[int]) -> str:
