@@ -40,7 +40,7 @@ def main(
 
     # 初始化词表
     vocab = {i: bytes([i]) for i in range(256)}
-    vocab[256] = b"<|endoftext|>"
+    vocab[256] = b"<|endoftext|>"  # 关键！把256分配给eot
     merges = []
 
     print("Starting BPE training loop...")
