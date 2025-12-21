@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+
+"""
+Usage:
+    python tests/check_bpe_tokenizer.py
+"""
+
 from forge_transformer.bpe import Tokenizer
 from forge_transformer import BASE_DIR
 
@@ -8,8 +15,12 @@ tok = Tokenizer.from_files(
     ["<|endoftext|>"],
 )
 
-print("=" * 30 + " Test: bpe tokenizer " + "=" * 30)
-print("请输入word:")
+
+begin = " Test: bpe tokenizer "
+end = " Test End "
+d = (len(begin) - len(end)) // 2
+print("=" * 30 + begin + "=" * 30)
+print("请输入单词（ctrl+d 退出）:")
 
 while True:
     try:
@@ -19,7 +30,7 @@ while True:
             print("ids:", ids)
             print("len:", len(ids))
             print("decoded:", tok.decode(ids))
-        break
 
     except EOFError:
-        print("=" * 30 + "Test End" + "=" * 30)
+        print("=" * (30 + d) + end + "=" * (30 + d))
+        break

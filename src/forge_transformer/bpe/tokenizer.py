@@ -50,7 +50,7 @@ class Tokenizer:
         return cls(vocab, merges, special_tokens)
 
     @lru_cache(maxsize=200000)  # 历史答案剪枝
-    def _bpe_ids(self, token_bytes: bytes) -> tuple[int, ...]:  # lru_cache 要求静态数组
+    def bpe(self, token_bytes: bytes) -> tuple[int, ...]:  # lru_cache 要求静态数组
         word: list[int] = list(token_bytes)
         if len(word) <= 1:
             return tuple(word)
@@ -87,7 +87,7 @@ class Tokenizer:
         ids: list[int] = []
         for match in self.compiled_pat.finditer(text):
             token_bytes = match.group(0).encode("utf-8")
-            ids.extend(self._bpe_ids(token_bytes))
+            ids.extend(self.bpe(token_bytes))
         return ids
 
     def decode(self, ids: list[int]) -> str:
