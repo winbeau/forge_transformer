@@ -150,7 +150,7 @@ def parse_args():
     p.add_argument("--vocab-path", type=Path, default=BASE_DIR / "bpe_model/vocab.json")
     p.add_argument("--merges-path", type=Path, default=BASE_DIR / "bpe_model/merges.txt")
     p.add_argument("--special-tokens", type=str, default="<|endoftext|>")
-    p.add_argument("--num-workers", type=int, default=max(1, cpu_count() - 4))
+    p.add_argument("--num-workers", type=int, default=min(12, max(1, cpu_count() - 4)))
     p.add_argument("--chunks-per-worker", type=int, default=16)  # controls number of tasks
     p.add_argument("--mini-chunk-size", type=int, default=4096)  # for boundary scanning
     p.add_argument("--maxtasksperchild", type=int, default=200)  # avoid long-run mem bloat
