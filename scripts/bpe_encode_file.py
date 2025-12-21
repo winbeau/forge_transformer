@@ -63,6 +63,10 @@ def main(
 
     if special_tokens is None:
         special_tokens = ["<|endoftext|>"]
+    elif isinstance(special_tokens, str):
+        # 支持 "a,b,c" 或单个 token
+        special_tokens = [s for s in special_tokens.split(",") if s]
+
 
     file_size_bytes = input_path.stat().st_size
 
