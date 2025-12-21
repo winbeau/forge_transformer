@@ -9,7 +9,9 @@ import numpy as np
 import argparse
 
 
-def check_tokens(file_path, target_id=256):
+def check_tokens(args):
+    file_path = args.path
+    target_id = args.id
     print(f"Loading {file_path}...")
     # 使用 mmap_mode='r' 可以秒开大文件，且不占用过多内存
     data = np.load(file_path, mmap_mode="r")
@@ -40,4 +42,4 @@ if __name__ == "__main__":
     parser.add_argument("--id", type=int, default=256, help="Token ID to search for")
     args = parser.parse_args()
 
-    check_tokens(args.path, args.id)
+    check_tokens(args)
