@@ -74,8 +74,8 @@ def main(args):
     output_path = args.output
     num_workers = args.num_workers
     num_chunks = args.desired_chunks if args.desired_chunks > 0 else num_workers * 4
-
     spec_tok = ["<|endoftext|>"]
+
     with open(input_path, "rb") as f:
         bounds = find_chunk_boundaries(f, num_chunks, spec_tok[0].encode())
 
