@@ -20,10 +20,34 @@ class RoPE(nn.Module):
         freqs = torch.einsum("i,k->ik", t, inv_freq)
         self.register_buffer("cos", torch.cos(freqs))  # 存为 buffer 不会被识别为学习参数
         self.register_buffer("sin", torch.sin(freqs))
+        self.register_buffer(
+            "inv_freq",
+            1.0 / (Theta ** (torch.arange(0, d_k, 2).float() / d_k)),
+        )
+
+
+
+    def _update_cos_sin(self, seq_len, device, dtype):
+        inv_freq = self.inv_freq.to(device=device, dtype=dtype)
+        t = torch.arange(seq_len, device=device, dtype=dtype)
+        freqs = torch.einsum("i,k->ik", t, inv_freq)
+
+        self.cos = torch.cos(freqs)
+        self.sin = torch.sin(freqs)
+
 
     def forward(self, x, positions):  # x: [..., seq_len, d_k] position: [..., seq_len]
-        cos = self.cos[positions]  # 变为 [Batch, 1, Seq_len, d_k/2]
-        sin = self.sin[positions]
+        # cos = self.cos[positions]  # 变为 [Batch, 1, Seq_len, d_k/2]
+        # sin = self.sin[positions]
+        max_pos = int(positions.max()) + 1
+
+        if max_pos > self.cos.shape[0]:
+            # 动态扩展 RoPE cache
+            self._update_cos_sin(max_pos, x.device, x.dtype)
+
+        cos = self.cos[positions].to(x.device, x.dtype)
+        sin = self.sin[positions].to(x.device, x.dtype)
+
         if x.ndim == 4:
             cos = cos.unsqueeze(0).unsqueeze(1)  # 变成 [1, 1, T, D/2]
             sin = sin.unsqueeze(0).unsqueeze(1)
