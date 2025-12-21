@@ -5,7 +5,7 @@ from .layers import RMSNorm, SwiGLU
 from .attention import MultiHeadSelfAttention
 
 
-class TransformerBlock(nn.Module):
+class TransformerBlock(nn.Module):  # FFN + MHSA
     def __init__(self, d_model, num_heads):
         super().__init__()
         self.norm1 = RMSNorm(d_model)

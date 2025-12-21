@@ -22,8 +22,11 @@ class RoPE(nn.Module):
         self.register_buffer("sin", torch.sin(freqs))
 
     def forward(self, x, positions):  # x: [..., seq_len, d_k] position: [..., seq_len]
-        cos = self.cos[positions].unsqueeze(1)  # 变为 [Batch, 1, Seq_len, d_k/2]
-        sin = self.sin[positions].unsqueeze(1)
+        cos = self.cos[positions]  # 变为 [Batch, 1, Seq_len, d_k/2]
+        sin = self.sin[positions]
+        if x.ndim == 4:
+            cos = cos.unsqueeze(0).unsqueeze(1)  # 变成 [1, 1, T, D/2]
+            sin = sin.unsqueeze(0).unsqueeze(1)
         """分隔奇偶 -> 求对应值 -> 按维度堆叠 -> 展平"""
         x0, x1 = x[..., ::2], x[..., 1::2]  # 把 x 拆分为偶数序列、奇数序列
         x_rot = torch.stack((x0 * cos - x1 * sin, x0 * sin + x1 * cos), dim=-1)
