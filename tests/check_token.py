@@ -2,14 +2,14 @@
 
 """
 Usage:
-    python tests/check_bpe_encode.py --path ./data/TinyStories/train_tokens.npy
+    python tests/check_token.py --path ./data/TinyStories/train_tokens.npy
 """
 
 import numpy as np
 import argparse
 
 
-def check_tokens(args):
+def main(args):
     file_path = args.path
     target_id = args.id
     print(f"Loading {file_path}...")
@@ -42,4 +42,4 @@ if __name__ == "__main__":
     parser.add_argument("--id", type=int, default=256, help="Token ID to search for")
     args = parser.parse_args()
 
-    check_tokens(args)
+    main(args)
