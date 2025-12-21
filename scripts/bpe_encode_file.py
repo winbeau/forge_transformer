@@ -58,7 +58,8 @@ def main(
     output_path = Path(output_tokens_path)
     vocab_path = Path(vocab_path)
     merges_path = Path(merges_path)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_tokens_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if special_tokens is None:
         special_tokens = ["<|endoftext|>"]
@@ -111,7 +112,7 @@ def main(
                         buffer.extend(encoded_ids)
 
                     if buffer:
-                        arr = np.array(buffer, dtype=np.unit16)
+                        arr = np.array(buffer, dtype=np.uint16)
                         f_out.write(arr.tobytes())
                         total_tokens += len(arr)
                         buffer.clear()
