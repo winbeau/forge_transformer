@@ -79,11 +79,12 @@ class Tokenizer:
 
         return word
 
-    def _get_bpe_tokens(self, token_bytes: bytes) -> list[bytes]:
+    @lru_cache(maxsize=200000)
+    def _get_bpe_tokens(self, token_bytes: bytes) -> tuple[bytes, ...]:
         word = [bytes([b]) for b in token_bytes]
         pairs = set(zip(word, word[1:]))
         if not pairs:
-            return word
+            return tuple(word)
 
         while True:
             candidates = pairs.intersection(self.bpe_ranks.keys())
@@ -104,7 +105,7 @@ class Tokenizer:
             if len(word) == 1:
                 break
             pairs = set(zip(word, word[1:]))
-        return word
+        return tuple(word)
 
     def encode(self, text: str) -> list[int]:
         ids = []
