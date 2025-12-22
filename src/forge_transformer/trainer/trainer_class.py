@@ -102,12 +102,7 @@ class Trainer:
         for cur_step in range(self.start_step, self.cfg.total_steps):
             t0 = time.time()
 
-            # --- 1. 获取 Batch ---
-            x, y = get_batch(
-                self.train_data, batch_size=self.cfg.batch_size, context_len=self.cfg.context_len, device=self.device
-            )
-
-            # --- 2. 学习率调度 (Cosine Decay with Warmup) ---
+            # --- 1. 学习率调度 (Cosine Decay with Warmup) ---
             lr = cosine_lr_schedule(
                 t=cur_step,
                 lr_max=self.cfg.lr_max,
@@ -119,13 +114,21 @@ class Trainer:
             for param_group in self.optimizer.param_groups:
                 param_group["lr"] = lr
 
-            # --- 3. 前向传播与 Loss 计算 ---
-            logits = self.model(x)
-            loss = cross_entropy_loss(logits, y)
-
-            # --- 4. 反向传播与参数更新 ---
+            # --- 2. 梯度累积 ---
             self.optimizer.zero_grad(set_to_none=True)
-            loss.backward()
+            total_loss = 0.0
+            for _ in range(self.cfg.grad_accum_steps):
+                x, y = get_batch(
+                    self.train_data,
+                    batch_size=self.cfg.batch_size,
+                    context_len=self.cfg.context_len,
+                    device=self.device,
+                )
+                logits = self.model(x)
+                loss = cross_entropy_loss(logits, y)
+                (loss / self.cfg.grad_accum_steps).backward()
+                total_loss += loss.item()
+
             grad_norm = clip_gradients(self.model.parameters(), self.cfg.grad_clip_norm)
             self.optimizer.step()
 
@@ -134,7 +137,7 @@ class Trainer:
 
             # --- 5. 日志记录 ---
             if cur_step % self.cfg.log_every == 0:
-                loss_val = loss.item()
+                loss_val = total_loss / self.cfg.grad_accum_steps
                 msg = (
                     f"[{time.strftime('%H:%M:%S')}] "
                     f"step {cur_step:06d} | "

@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("--warmup_iters", type=int, default=200, help="Linear warmup steps")
     parser.add_argument("--weight_decay", type=float, default=0.1, help="AdamW weight decay")
     parser.add_argument("--grad_clip", type=float, default=1.0, help="Gradient clipping norm")
+    parser.add_argument("--grad_accum_steps", type=int, default=1, help="Gradient accumulation steps")
 
     # === 模型架构 ===
     parser.add_argument("--context_len", type=int, default=256, help="Max sequence length (context window)")
@@ -78,6 +79,7 @@ def main():
         warmup_iters=args.warmup_iters,
         weight_decay=args.weight_decay,
         grad_clip_norm=args.grad_clip,
+        grad_accum_steps=args.grad_accum_steps,
         # 模型
         d_model=args.d_model,
         num_layers=args.num_layers,

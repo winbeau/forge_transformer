@@ -29,6 +29,7 @@ class TrainingConfig:
     eps: float = 1e-8
     weight_decay: float = 0.1
     grad_clip_norm: float = 1.0
+    grad_accum_steps: int = 1
 
     # === Scheduler ===
     warmup_iters: int = 200
@@ -49,6 +50,8 @@ class TrainingConfig:
             multiple = 64
             raw_dff = int((8 / 3) * self.d_model)
             self.d_ff = multiple * ((raw_dff + multiple - 1) // multiple)
+        if self.grad_accum_steps < 1:
+            raise ValueError("grad_accum_steps must be >= 1")
         if self.target_dir is None:
             self.target_dir = "."
         if self.ckpt_dir is None:

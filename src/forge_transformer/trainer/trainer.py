@@ -81,13 +81,6 @@ def train_loop(
     model, optimizer, start_step = create_model_and_optimizer(cfg, cfg.ckpt_path_to_resume)
 
     for cur_step in range(start_step, total_steps):
-        x, y = get_batch(
-            train_data,
-            batch_size=cfg.batch_size,
-            context_len=cfg.context_len,
-            device=device,
-        )
-
         lr_t = cosine_lr_schedule(
             t=cur_step,
             lr_max=cfg.lr_max,
@@ -98,17 +91,26 @@ def train_loop(
         for g in optimizer.param_groups:  # 计算学习率并更新
             g["lr"] = lr_t
 
-        logits = model(x)
-        loss = cross_entropy_loss(logits, y)  # 计算当前 step 损失
-
         optimizer.zero_grad(set_to_none=True)
-        loss.backward()  # 计算梯度
+        total_loss = 0.0
+        for _ in range(cfg.grad_accum_steps):
+            x, y = get_batch(
+                train_data,
+                batch_size=cfg.batch_size,
+                context_len=cfg.context_len,
+                device=device,
+            )
+            logits = model(x)
+            loss = cross_entropy_loss(logits, y)  # 计算当前 step 损失
+            (loss / cfg.grad_accum_steps).backward()
+            total_loss += loss.item()
+
         grad_norm = clip_gradients(model.parameters(), cfg.grad_clip_norm)  # 梯度裁剪
 
         optimizer.step()  # 更新参数
 
         if cur_step % cfg.log_every == 0:  # 训练日志
-            loss_val = float(loss.item())
+            loss_val = float(total_loss / cfg.grad_accum_steps)
             msg = (
                 f"[{time.strftime('%H:%M:%S')}] "
                 f"step {cur_step:06d} "
