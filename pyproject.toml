@@ -21,6 +21,7 @@ dependencies = [
     "ty>=0.0.1a16",
     "datasets>=4.4.2",
     "pathlib>=1.0.1",
+    "huggingface-hub>=1.2.3",
 ]
 
 [build-system]
