@@ -38,24 +38,28 @@ def infer_model_config(state_dict):
     # RoPE cos shape is [seq_len, head_dim/2]
     # We found blocks.0.attn.rope.cos
     rope_key = 'blocks.0.attn.rope.cos'
+    max_seq_len = 1024 # Default fallback
+    
     if rope_key in state_dict:
         # shape is [max_seq_len, dim] where dim = head_dim / 2
-        rope_dim = state_dict[rope_key].shape[1]
+        rope_cos = state_dict[rope_key]
+        max_seq_len = rope_cos.shape[0]
+        rope_dim = rope_cos.shape[1]
         head_dim = rope_dim * 2
         num_heads = d_model // head_dim
     else:
         # Fallback: assume head_dim=64 if typical
         head_dim = 64
         num_heads = d_model // head_dim
-        print(f"Warning: Could not find RoPE weights to infer head_dim. Assuming head_dim={head_dim}.")
+        print(f"Warning: Could not find RoPE weights to infer head_dim/seq_len. Assuming head_dim={head_dim}, seq_len={max_seq_len}.")
 
-    print(f"Inferred Config: vocab_size={vocab_size}, d_model={d_model}, num_layers={num_layers}, num_heads={num_heads}")
+    print(f"Inferred Config: vocab_size={vocab_size}, d_model={d_model}, num_layers={num_layers}, num_heads={num_heads}, max_seq_len={max_seq_len}")
     return {
         'vocab_size': vocab_size,
         'd_model': d_model,
         'num_heads': num_heads,
         'num_layers': num_layers,
-        'max_seq_len': 2048, # Default safe value, RoPE will resize if needed
+        'max_seq_len': max_seq_len,
     }
 
 def generate(

@@ -16,7 +16,10 @@ class TransformerLM(nn.Module):
     ):
         super().__init__()
         self.token_emb = Embedding(vocab_size, d_model)
-        self.blocks = nn.ModuleList([TransformerBlock(d_model, num_heads) for _ in range(num_layers)])
+        self.blocks = nn.ModuleList([
+            TransformerBlock(d_model, num_heads, seq_len=max_seq_len) 
+            for _ in range(num_layers)
+        ])
         self.norm = RMSNorm(d_model)
         self.out = Linear(d_model, vocab_size)  # 线性层输出
 
